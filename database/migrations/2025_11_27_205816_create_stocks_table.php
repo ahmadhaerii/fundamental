@@ -15,16 +15,15 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->decimal('price');
-            $table->string('category-id');
             $table->string('tsetmc-link');
             $table->string('rahavard-link');
-            $table->string('codal-link');
             $table->string('codal-link');
             $table->decimal('last-price');
             $table->decimal('p-e-ttm');
             $table->decimal('p-e-forward');
             $table->decimal('last-dp');
             $table->string('tsetmc-id');
+            $table->foreignId('category_id')->constrained('categories')->onDelete('cascade');
             $table->timestamps();
         });
     }

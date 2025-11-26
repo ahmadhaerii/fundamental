@@ -4,6 +4,7 @@ namespace App\Http\Controllers\MyTest;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
+use App\Models\Stock;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -21,12 +22,14 @@ class MyTestController extends Controller
      */
     public function update(Request $request)
     {
-        $response = Http::get('https://cdn.tsetmc.com/api/Instrument/GetInstrumentInfo/778253364357513');
-        $response = Http::get('https://cdn.tsetmc.com/api/ClosingPrice/GetClosingPriceInfo/778253364357513');
+//        $response = Http::get('https://cdn.tsetmc.com/api/Instrument/GetInstrumentInfo/778253364357513');
+//        $response = Http::get('https://cdn.tsetmc.com/api/ClosingPrice/GetClosingPriceInfo/778253364357513');
+//
+//        $html = $response->body();
+        $posts = Stock::with('category')->get();
 
-        $html = $response->body();
 
-        return $html ;
+        return $posts ;
 //        $request->user()->fill($request->validated());
 //
 //        if ($request->user()->isDirty('email')) {

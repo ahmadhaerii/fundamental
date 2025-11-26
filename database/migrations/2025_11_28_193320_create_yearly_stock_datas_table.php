@@ -13,13 +13,12 @@ return new class extends Migration
     {
         Schema::create('yearly_stock_datas', function (Blueprint $table) {
             $table->id();
-            $table->integer('stock_id');
-            $table->integer('year');
-            $table->integer('operating-income');
-            $table->integer('net-profit-and-loss');
-            $table->integer('cost-of-production-to-sales');
-            $table->integer('dollar-price-id');
-            $table->integer('');
+            $table->string('year');
+            $table->decimal('operating-income');
+            $table->decimal('net-profit-and-loss');
+            $table->decimal('cost-of-production-to-sales');
+            $table->foreignId('stock_id')->constrained('stocks')->onDelete('cascade');
+            $table->foreignId('dollar-price_id')->constrained('dollar-prices')->onDelete('cascade');
             $table->timestamps();
         });
     }
