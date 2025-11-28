@@ -12,6 +12,18 @@ class Stock extends Model
     {
         return $this->belongsTo(Category::class);
     }
+    public function monthlyStockData()
+    {
+        return $this->hasMany(MonthlyStockData::class);
+    }
+    public function yearlyStockData()
+    {
+        return $this->hasMany(YearlyStockData::class);
+    }
+    public function dollarPrice()
+    {
+        return $this->hasOneThrough(DollarPrice::class, YearlyStockData::class);
+    }
 
 
 }

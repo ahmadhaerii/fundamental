@@ -17,5 +17,4 @@ Route::get('dashboard', function () {
 
 Route::get('getData', [MyTestController::class, 'update'])->name('updateAllData');
 
-
 require __DIR__.'/settings.php';
