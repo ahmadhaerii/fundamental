@@ -20,13 +20,13 @@ class MyTestController extends Controller
     /**
      * Update the user's profile information.
      */
-    public function update(Request $request)
+    public function getStock(Request $request , string $id)
     {
 //        $response = Http::get('https://cdn.tsetmc.com/api/Instrument/GetInstrumentInfo/778253364357513');
 //        $response = Http::get('https://cdn.tsetmc.com/api/ClosingPrice/GetClosingPriceInfo/778253364357513');
 //
 //        $html = $response->body();
-        $posts = Stock::with('category')->get();
+        $posts = Stock::find($id)->with('category','monthlyStockData' ,'yearlyStockData.dollarPrice')->firstOrFail();
 
 
         return $posts ;

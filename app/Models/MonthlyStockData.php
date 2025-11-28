@@ -4,7 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
-class StockMonthlyData extends Model
+class MonthlyStockData extends Model
 {
     public function stock(){
         return $this->belongsTo(Stock::class);
