@@ -13,26 +13,26 @@ return new class extends Migration
     {
         Schema::create('stock-monthly-datas', function (Blueprint $table) {
             $table->id();
-            $table->decimal('m1');
-            $table->decimal('m2');
-            $table->decimal('m3');
-            $table->decimal('m4');
-            $table->decimal('m5');
-            $table->decimal('m6');
-            $table->decimal('m7');
-            $table->decimal('m8');
-            $table->decimal('m9');
-            $table->decimal('m10');
-            $table->decimal('m11');
-            $table->decimal('m12');
-            $table->decimal('seals-3-monthly');
-            $table->decimal('seals-6-monthly');
-            $table->decimal('seals-9-monthly');
-            $table->decimal('seals-12-monthly');
-            $table->decimal('net-profit-3-monthly');
-            $table->decimal('net-profit-6-monthly');
-            $table->decimal('net-profit-9-monthly');
-            $table->decimal('net-profit-12-monthly');
+            $table->float('m1');
+            $table->float('m2');
+            $table->float('m3');
+            $table->float('m4');
+            $table->float('m5');
+            $table->float('m6');
+            $table->float('m7');
+            $table->float('m8');
+            $table->float('m9');
+            $table->float('m10');
+            $table->float('m11');
+            $table->float('m12');
+            $table->float('seals-3-monthly');
+            $table->float('seals-6-monthly');
+            $table->float('seals-9-monthly');
+            $table->float('seals-12-monthly');
+            $table->float('net-profit-3-monthly');
+            $table->float('net-profit-6-monthly');
+            $table->float('net-profit-9-monthly');
+            $table->float('net-profit-12-monthly');
 
             $table->foreignId('stock_id')->constrained('stocks')->onDelete('cascade');
             $table->timestamps();

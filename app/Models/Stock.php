@@ -20,6 +20,14 @@ class Stock extends Model
     {
         return $this->hasMany(YearlyStockData::class);
     }
+    public function stockDailyCheckUrl()
+    {
+        return $this->hasOne(StockDailyCheckUrl::class);
+    }
+    public function codalReport()
+    {
+        return $this->hasOne(CodalReport::class);
+    }
     public function dollarPrice()
     {
         return $this->hasOneThrough(DollarPrice::class, YearlyStockData::class);

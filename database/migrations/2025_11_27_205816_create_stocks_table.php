@@ -14,14 +14,14 @@ return new class extends Migration
         Schema::create('stocks', function (Blueprint $table) {
             $table->id();
             $table->string('name');
-            $table->decimal('price');
+            $table->float('price');
             $table->string('tsetmc-link');
             $table->string('rahavard-link');
             $table->string('codal-link');
-            $table->decimal('last-price');
-            $table->decimal('p-e-ttm');
-            $table->decimal('p-e-forward');
-            $table->decimal('last-dp');
+            $table->float('last-price');
+            $table->float('p-e-ttm');
+            $table->float('p-e-forward');
+            $table->float('last-dp');
             $table->string('tsetmc-id');
             $table->foreignId('category_id')->constrained('categories')->onDelete('cascade');
             $table->timestamps();

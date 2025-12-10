@@ -14,7 +14,7 @@ return new class extends Migration
         Schema::create('dollar-prices', function (Blueprint $table) {
             $table->id();
             $table->string('year');
-            $table->decimal('price');
+            $table->float('price');
             $table->timestamps();
         });
     }
