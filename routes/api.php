@@ -24,3 +24,4 @@ Route::post('Security/Auth/OfficeLogin', function (Request $request) {
 
 Route::get('get_stock/{id}', [MyTestController::class, 'getStock'])->name('getStock');
 Route::get('get_stock_data/{id}', [MyTestController::class, 'getStockData'])->name('getStockData');
+Route::get('start_auto_download_data', [MyTestController::class, 'startAutoDownloadData'])->name('startAutoDownloadData');

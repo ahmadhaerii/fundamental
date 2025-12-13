@@ -23,6 +23,7 @@ return new class extends Migration
             $table->float('p-e-forward');
             $table->float('last-dp');
             $table->string('tsetmc-id');
+            $table->string('update_time');
             $table->foreignId('category_id')->constrained('categories')->onDelete('cascade');
             $table->timestamps();
         });
