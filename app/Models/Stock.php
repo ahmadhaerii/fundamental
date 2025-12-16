@@ -32,6 +32,9 @@ class Stock extends Model
     {
         return $this->hasOneThrough(DollarPrice::class, YearlyStockData::class);
     }
-
+    public function reportQueue()
+    {
+        return $this->hasMany(ReportQueue::class);
+    }
 
 }

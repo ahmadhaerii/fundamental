@@ -4,6 +4,7 @@ namespace App\Http\Controllers\MyTest;
 
 use App\Http\Controllers\Controller;
 use App\Jobs\FetchCodalData;
+use App\Jobs\FetchReportsData;
 use App\Models\Stock;
 use App\Models\CodalReport;
 use Illuminate\Http\Request;
@@ -14,6 +15,7 @@ class MyTestController extends Controller
 
     public function startAutoDownloadData(){
         FetchCodalData::dispatch();
+        FetchReportsData::dispatch();
         return "done" ;
     }
     public function getStockData(Request $request , string $id){
