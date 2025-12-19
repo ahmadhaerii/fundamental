@@ -20,6 +20,10 @@ class Stock extends Model
     {
         return $this->hasMany(YearlyStockData::class);
     }
+    public function lastForecastPrice()
+    {
+        return $this->hasOne(ForecastPrice::class)->latestOfMany();
+    }
     public function stockDailyCheckUrl()
     {
         return $this->hasOne(StockDailyCheckUrl::class);

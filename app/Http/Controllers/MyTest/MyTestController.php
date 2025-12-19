@@ -7,19 +7,28 @@ use App\Jobs\FetchCodalData;
 use App\Jobs\FetchReportsData;
 use App\Models\Stock;
 use App\Models\CodalReport;
+use App\Services\CalculateForecastPriceData;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
 
 class MyTestController extends Controller
 {
+    public function __construct(
+        protected CalculateForecastPriceData $calculateForecastPriceData,
+    ) {}
 
     public function startAutoDownloadData(){
         FetchCodalData::dispatch();
         FetchReportsData::dispatch();
         return "done" ;
     }
+    public function startAutoDownloadCodal(){
+        FetchCodalData::dispatch();
+        return "done" ;
+    }
     public function getStockData(Request $request , string $id){
-        $posts = Stock::find($id)->with('category','monthlyStockData' ,'yearlyStockData.dollarPrice')->firstOrFail();
-        return $posts;
+        $stock = Stock::find($id)->with('category','monthlyStockData' ,'yearlyStockData.dollarPrice','lastForecastPrice')->firstOrFail();
+        $stock->forecastPrice =   $this->calculateForecastPriceData->calculate($stock->id);
+        return $stock;
     }
 }
