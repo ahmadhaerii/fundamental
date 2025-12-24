@@ -28,7 +28,7 @@ class MyTestController extends Controller
     }
     public function getStockData(Request $request , string $id){
         $stock = Stock::find($id)->with('category','monthlyStockData' ,'yearlyStockData.dollarPrice','lastForecastPrice')->firstOrFail();
-        $stock->forecastPrice =   $this->calculateForecastPriceData->calculate($stock->id);
+        $stock->forecast_monthly_stock_data =   $this->calculateForecastPriceData->calculate($stock->id);
         return $stock;
     }
 }

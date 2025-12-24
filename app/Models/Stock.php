@@ -40,5 +40,8 @@ class Stock extends Model
     {
         return $this->hasMany(ReportQueue::class);
     }
+    public function stockFundamental() {
+        return $this->hasMany(StockFundamental::class);
+    }
 
 }
