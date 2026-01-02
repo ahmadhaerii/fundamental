@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\OrdinaryGeneralAssemblyResolution;
 use App\Models\CodalReport;
 use App\Models\DollarPrice;
 use App\Models\MonthlyStockData;
@@ -9,12 +10,14 @@ use App\Models\ReportQueue;
 use App\Models\Stock;
 use App\Models\YearlyStockData;
 use App\Services\CalculateForecastPriceData;
+use App\Services\CalculateStockFundamentalsData;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Bus\Queueable;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
+use Symfony\Component\DomCrawler\Crawler;
 
 class FetchReportsData implements ShouldQueue
 {
@@ -26,12 +29,13 @@ class FetchReportsData implements ShouldQueue
      * Create a new job instance.
      */
     public function __construct(
-
+        protected CalculateStockFundamentalsData $calculateStockFundamentalsData,
     ) {}
 
     public function handle(CalculateForecastPriceData $calculateForecastPriceData)
     {
         $this->calculateForecastPriceData = $calculateForecastPriceData;
+            error_log("aaa ");
 
 
         $reportQueue = ReportQueue::where('status', 'pending')->with('stock')->orderBy('tracing_no', 'asc')->get()->first();
@@ -41,18 +45,20 @@ class FetchReportsData implements ShouldQueue
             if ($reportQueue->report_type == 'm1') {
                 $this->getCodal_1_monthData($reportQueue);
             }elseif ($reportQueue->report_type == 'm3') {
-                $this->getCodal_3_monthData($reportQueue);
+                // $this->getCodal_3_monthData($reportQueue);
             }elseif($reportQueue->report_type == 'm6') {
-               $this->getCodal_6_monthData($reportQueue);
+              //  $this->getCodal_6_monthData($reportQueue);
            }elseif($reportQueue->report_type == 'm9') {
-               $this->getCodal_9_monthData($reportQueue);
+               // $this->getCodal_9_monthData($reportQueue);
             }elseif($reportQueue->report_type == 'm12') {
                $this->getCodal_12_monthData($reportQueue);
+            }elseif($reportQueue->report_type == 'ordinary_general_assembly_resolutions') {
+               $this->getCodalOrdinaryGeneralAssemblyResolutionsData($reportQueue);
             }
 
         }
 
-          self::dispatch()->delay(now()->addSeconds(20));
+         // self::dispatch()->delay(now()->addSeconds(20));
     }
 
     private function getCodal_1_monthData( ReportQueue $reportQueue  ){
@@ -92,10 +98,11 @@ class FetchReportsData implements ShouldQueue
                         $codalReport->year_end_to_date = $datasourceArray['yearEndToDate'];
                         $codalReport->year = explode("/", $codalReport->year_end_to_date)[0] ;
                         $codalReport->period_end_to_date = $datasourceArray['periodEndToDate'];
-                        $codalReport->trade_and_other_receivables = 0;
+                        $codalReport->trade_and_other_receivables_current_period = 0;
+                        $codalReport->trade_and_other_receivables_prior_period = 0;
                         $codalReport->number_of_shares = 0;
                         $codalReport->total_equity = 0;
-                        $codalReport->net_profit_loss = 0;
+                        $codalReport->net_profit_and_loss = 0;
                         $codalReport->ending_period_finished_goods_inventory = 0;
                         $codalReport->first_period_finished_goods_inventory = 0;
                         $codalReport->cost_of_goods_sold = 0;
@@ -211,17 +218,20 @@ class FetchReportsData implements ShouldQueue
 
                 $codalReport1 = new CodalReport();
                 $codalReport1->report_period = 3 ;
-                $codalReport1 = $this->getCodalReportForSheetOne($codalReport1 , $reportQueue->url);
+                $codalReport1 = $this->getCodalReportForProfitAndLossStatement($codalReport1 , $reportQueue->url);
                 error_log(" 111111 => " );
 
                 if ($codalReport1 !== 'hasProblem') {
 
-                    $codalReport1 = $this->getCodalReportForSheetZero($codalReport1 , $reportQueue->url);
+                    $codalReport1 = $this->getCodalReportForFinancialStatement($codalReport1 , $reportQueue->url);
 
                     if ($codalReport1 !== 'hasProblem') {
                         error_log(" 222222 => " );
 
-                        $codalReport1 = $this->getCodalReportForSheet20($codalReport1 , $reportQueue->url);
+
+
+                        // getCodalReportForSheet20 حذف شده
+                        // $codalReport1 = $this->getCodalReportForSheet20($codalReport1 , $reportQueue->url);
                         if ($codalReport1 !== 'hasProblem') {
                             $codalReport1->stock_id = $reportQueue->stock->id;
                             $codalReport1->save();
@@ -231,7 +241,7 @@ class FetchReportsData implements ShouldQueue
                             if ($monthlyStockData !== null) {
                                 $monthlyStockData->update([
                                     'operating_income_3_monthly' => $codalReport1->operating_income ,
-                                    'net_profit_and_loss_3_monthly' => $codalReport1->net_profit_loss,
+                                    'net_profit_and_loss_3_monthly' => $codalReport1->net_profit_and_loss,
                                     'production_cost_3_monthly' => $codalReport1->cost_of_goods_sold,
                                 ]);
                                 error_log(" 444444 => " );
@@ -242,7 +252,7 @@ class FetchReportsData implements ShouldQueue
 
                                 $monthlyStockData->update([
                                         'operating_income_3_monthly' => $codalReport1->operating_income ,
-                                        'net_profit_and_loss_3_monthly' => $codalReport1->net_profit_loss,
+                                        'net_profit_and_loss_3_monthly' => $codalReport1->net_profit_and_loss,
                                         'production_cost_3_monthly' => $codalReport1->cost_of_goods_sold,
                                 ]);
                                 error_log(" 55555 => " );
@@ -293,13 +303,15 @@ class FetchReportsData implements ShouldQueue
 
                 $codalReport1 = new CodalReport();
                 $codalReport1->report_period = 6 ;
-                $codalReport1 = $this->getCodalReportForSheetOne($codalReport1 , $reportQueue->url);
+                $codalReport1 = $this->getCodalReportForProfitAndLossStatement($codalReport1 , $reportQueue->url);
 
                 if ($codalReport1 !== 'hasProblem') {
 
-                    $codalReport1 = $this->getCodalReportForSheetZero($codalReport1 , $reportQueue->url);
+                    $codalReport1 = $this->getCodalReportForFinancialStatement($codalReport1 , $reportQueue->url);
 
                     if ($codalReport1 !== 'hasProblem') {
+
+                        // getCodalReportForSheet20 حذف شده
 
                         $codalReport1 = $this->getCodalReportForSheet20($codalReport1 , $reportQueue->url);
                         if ($codalReport1 !== 'hasProblem') {
@@ -309,7 +321,7 @@ class FetchReportsData implements ShouldQueue
                             if ($monthlyStockData !== null) {
                                 $monthlyStockData->update([
                                     'operating_income_6_monthly' => $codalReport1->operating_income ,
-                                    'net_profit_and_loss_6_monthly' => $codalReport1->net_profit_loss,
+                                    'net_profit_and_loss_6_monthly' => $codalReport1->net_profit_and_loss,
                                     'production_cost_6_monthly' => $codalReport1->cost_of_goods_sold,
                                 ]);
                             }else {
@@ -318,7 +330,7 @@ class FetchReportsData implements ShouldQueue
 
                                 $monthlyStockData->update([
                                     'operating_income_6_monthly' => $codalReport1->operating_income ,
-                                    'net_profit_and_loss_6_monthly' => $codalReport1->net_profit_loss,
+                                    'net_profit_and_loss_6_monthly' => $codalReport1->net_profit_and_loss,
                                     'production_cost_6_monthly' => $codalReport1->cost_of_goods_sold,
                                 ]);
                             }
@@ -358,13 +370,15 @@ class FetchReportsData implements ShouldQueue
 
                 $codalReport1 = new CodalReport();
                 $codalReport1->report_period = 9 ;
-                $codalReport1 = $this->getCodalReportForSheetOne($codalReport1 , $reportQueue->url);
+                $codalReport1 = $this->getCodalReportForProfitAndLossStatement($codalReport1 , $reportQueue->url);
 
                 if ($codalReport1 !== 'hasProblem') {
 
-                    $codalReport1 = $this->getCodalReportForSheetZero($codalReport1 , $reportQueue->url);
+                    $codalReport1 = $this->getCodalReportForFinancialStatement($codalReport1 , $reportQueue->url);
 
                     if ($codalReport1 !== 'hasProblem') {
+
+                        // getCodalReportForSheet20 حذف شده
 
                         $codalReport1 = $this->getCodalReportForSheet20($codalReport1 , $reportQueue->url);
                         if ($codalReport1 !== 'hasProblem') {
@@ -374,7 +388,7 @@ class FetchReportsData implements ShouldQueue
                             if ($monthlyStockData !== null) {
                                 $monthlyStockData->update([
                                     'operating_income_9_monthly' => $codalReport1->operating_income ,
-                                    'net_profit_and_loss_9_monthly' => $codalReport1->net_profit_loss,
+                                    'net_profit_and_loss_9_monthly' => $codalReport1->net_profit_and_loss,
                                     'production_cost_9_monthly' => $codalReport1->cost_of_goods_sold,
                                 ]);
                             }else {
@@ -383,7 +397,7 @@ class FetchReportsData implements ShouldQueue
 
                                 $monthlyStockData->update([
                                     'operating_income_9_monthly' => $codalReport1->operating_income ,
-                                    'net_profit_and_loss_9_monthly' => $codalReport1->net_profit_loss,
+                                    'net_profit_and_loss_9_monthly' => $codalReport1->net_profit_and_loss,
                                     'production_cost_9_monthly' => $codalReport1->cost_of_goods_sold,
                                 ]);
                             }
@@ -422,27 +436,27 @@ class FetchReportsData implements ShouldQueue
 
                 $codalReport1 = new CodalReport();
                 $codalReport1->report_period = 12 ;
-                $codalReport1 = $this->getCodalReportForSheetOne($codalReport1 , $reportQueue->url);
+                $codalReport1 = $this->getCodalReportForProfitAndLossStatement($codalReport1 , $reportQueue->url);
 
                 if ($codalReport1 !== 'hasProblem') {
 
-                    $codalReport1 = $this->getCodalReportForSheetZero($codalReport1 , $reportQueue->url);
+                    $codalReport1 = $this->getCodalReportForFinancialStatement($codalReport1 , $reportQueue->url);
 
                     if ($codalReport1 !== 'hasProblem') {
 
-                        $codalReport1 = $this->getCodalReportForSheet20($codalReport1 , $reportQueue->url);
-                        if ($codalReport1 !== 'hasProblem') {
                             $codalReport1->stock_id = $reportQueue->stock->id;
                             $codalReport1->save();
+
                             $dollarPrice = DollarPrice::where("year", $codalReport1->year  )->get()->first();
                             $yearlyStockData = new  YearlyStockData();
                             $yearlyStockData->year = $codalReport1->year  ; // سال مالی
                             $yearlyStockData->operating_income = $codalReport1 -> operating_income; // درآمد عملیاتی
-                            $yearlyStockData->net_profit_and_loss = $codalReport1->net_profit_loss ; // سود و زیان خالس
+                            $yearlyStockData->net_profit_and_loss = $codalReport1->net_profit_and_loss ; // سود و زیان خالس
                             $yearlyStockData->production_cost = $codalReport1->cost_of_goods_sold ; // هزینه تولید
                             $yearlyStockData->stock_id = $codalReport1->stock_id ;
                             $yearlyStockData->dollar_price_id  = $dollarPrice->id ;
-
+                            // این را از جدول مربوطه فرخوانی کن
+                            $yearlyStockData->dp  = 0 ;
 
                             $yearlyStockData->operating_income_in_dollars = $yearlyStockData->operating_income / $dollarPrice->price ;
                             $yearlyStockData->production_cost_in_dollars = $yearlyStockData->production_cost / $dollarPrice->price ;
@@ -500,17 +514,12 @@ class FetchReportsData implements ShouldQueue
 
                             error_log('save data  for   ' .$reportQueue->tracing_no . "  " . $yearlyStockData->year);
 
-                            $this->calculateForecastPriceData->updateForecastPriceData($yearlyStockData->stock_id);
+                             $this->calculateStockFundamentalsData->calculate($yearlyStockData->stock_id);
 
 
                             $reportQueue->update([
                                 'status' => "success",
                             ]);
-                        }else{
-                            $reportQueue->update([
-                                'status' => "failed-Sheet20-problem",
-                            ]);
-                        }
                     }else{
                         $reportQueue->update([
                             'status' => "failed-SheetZero-problem",
@@ -529,12 +538,70 @@ class FetchReportsData implements ShouldQueue
 
     }
 
+    private function getCodalOrdinaryGeneralAssemblyResolutionsData( ReportQueue $reportQueue){
+
+
+                    $netProfitLossData = Http::withHeaders([
+                        'Accept' => 'application/json',
+                    ])->get($reportQueue->url);
+                    $html = $netProfitLossData->body();
+                    $crawler = new Crawler($html);
+
+                    //  سود نقدی هر سهم
+                    $dividend_per_share = $crawler->filter('#ucAssemblyPRetainedEarning_grdAssemblyProportionedRetainedEarning_ctl18_txbYear');
+
+
+                    //        سود (زیان) خالص هر سهم
+                    $net_profit_and_loss_per_share = $crawler->filter('#ucAssemblyPRetainedEarning_grdAssemblyProportionedRetainedEarning_ctl17_txbYear');
+
+                    if ($dividend_per_share->count() > 0) {
+                        $dividend_per_share = $dividend_per_share->attr('value');
+                    } else {
+                        $reportQueue->update([
+                        'status' => "failed-Input-not-found",
+                    ]);
+                    }
+                    if ($net_profit_and_loss_per_share->count() > 0) {
+                        $net_profit_and_loss_per_share = $net_profit_and_loss_per_share->attr('value');
+                    } else {
+                       $reportQueue->update([
+                        'status' => "failed-Input-not-found",
+                        ]);
+                    }
+                    $year_end_to_date = $crawler->filter('#lblYearEndToDate')->text();
+
+                    try {
+
+                            $ordinaryGeneralAssemblyResolution = new OrdinaryGeneralAssemblyResolution();
+                            $ordinaryGeneralAssemblyResolution->net_profit_and_loss_per_share = $net_profit_and_loss_per_share ;
+                            $ordinaryGeneralAssemblyResolution->dividend_per_share = $dividend_per_share;
+                            $ordinaryGeneralAssemblyResolution->year = explode("/", $year_end_to_date)[0];
+                            $ordinaryGeneralAssemblyResolution->dp =  ((int)$dividend_per_share / (int)$net_profit_and_loss_per_share) * 100 ;
+                            $ordinaryGeneralAssemblyResolution->category_id  =  $reportQueue->stock->category_id ;
+                            $ordinaryGeneralAssemblyResolution->stock_id   =  $reportQueue->stock->id ;
+                            $ordinaryGeneralAssemblyResolution->save();
+
+                            $reportQueue->update([
+                                'status' => "success",
+                            ]);
+                        $yearlyStockData = YearlyStockData::where("stock_id", $ordinaryGeneralAssemblyResolution->stock_id )->where("year", $ordinaryGeneralAssemblyResolution->year )->get()->first();
+                        $yearlyStockData->update([
+                            'dp' => $ordinaryGeneralAssemblyResolution->dp,
+                        ]);
+                    } catch (Exception $e) {
+                        $reportQueue->update([
+                            'status' => "error=>  catch ",
+                        ]);
+                    }
+
+    }
+
     // دریافت اطلاعات از بخش ....
     // آی دی 223 مربوط به جدول .... است
     // آی دی 31 مربوط به .... است
     // آی دی 32 مربوط به .... است
     // آی دی 33 مربوط به .... است
-    private function getCodalReportForSheetOne(CodalReport $codalReport , string $url)
+    private function getCodalReportForProfitAndLossStatement(CodalReport $codalReport , string $url)
     {
         $netProfitLossData = Http::withHeaders([
             'Accept' => 'application/json',
@@ -572,27 +639,70 @@ class FetchReportsData implements ShouldQueue
 
             $cells = $sheet["tables"][0]["cells"];
 
+            $result = array_filter($cells, function($cell) {
+                return $cell['address'] === 'C1' && $cell['isVisible'] === true  ;
+            });
+            if (!empty($result)){
+                $secondColumnCode = reset($result)['columnCode'] ;
+            }else {
+
+                $result = array_filter($cells, function($cell) {
+                    return $cell['address'] === 'D1' && $cell['isVisible'] === true  ;
+                });
+                if (!empty($result)){
+                    $secondColumnCode = reset($result)['columnCode'] ;
+
+                }else {
+
+                    $result = array_filter($cells, function($cell) {
+                        return $cell['address'] === 'E1' && $cell['isVisible'] === true  ;
+                    });
+                    if (!empty($result)){
+                        $secondColumnCode = reset($result)['columnCode'] ;
+
+                    }else {
+                        $result = array_filter($cells, function($cell) {
+                            return $cell['address'] === 'F1' && $cell['isVisible'] === true  ;
+                        });
+                        $secondColumnCode = reset($result)['columnCode'] ;
+
+                    }
+                }
+            }
+
 
             foreach ($cells as $cell) {
-                // "type":6,
-                // "period":6
 
-                if ($cell['rowCode'] === 3  &&  $cell['columnCode'] === 2   ){
-
+                if ($cell['rowCode'] === 3   &&  $cell['columnCode'] === 2 && $cell['category'] === 0    ){
                     $codalReport->operating_income = $cell['value'];
-
                 }
 
-                if ($cell['rowCode'] === 17  &&  $cell['columnCode'] === 2  ){
+                if ($cell['rowCode'] === 3   &&  $cell['columnCode'] === $secondColumnCode  && $cell['category'] === 0    ){
+                    if (   $cell['isVisible'] === true ){
+                        $codalReport->operating_income_prior_period = $cell['value'];
+                    }else {
+                        $secondColumnCode = $secondColumnCode + 1 ;
 
-                    $codalReport->net_profit_loss = $cell['value'];
-
+                    }
                 }
 
-                if ($cell['rowCode'] === 42  &&  $cell['columnCode'] === 2    ){
+                if ($cell['rowCode'] === 17    &&  $cell['columnCode'] === 2 && $cell['category'] === 0   ){
+                    $codalReport->net_profit_and_loss = $cell['value'];
+                }
+                if ($cell['rowCode'] === 5    &&  $cell['columnCode'] === 2 && $cell['category'] === 0   ){
+                    $codalReport->gross_profit_and_loss = $cell['value'];
+                }
 
+                if ($cell['rowCode'] === 9  &&  $cell['columnCode'] === 2 && $cell['category'] === 0   ){
+                    $codalReport->operating_profit_and_loss = $cell['value'];
+                }
+
+                if ($cell['rowCode'] === 42  &&   $cell['columnCode'] === 2 && $cell['category'] === 0    ){
                     $codalReport->number_of_shares = $cell['value'];
+                }
 
+                if ($cell['rowCode'] === 4  &&  $cell['columnCode'] === 2 && $cell['category'] === 0     ){
+                    $codalReport->cost_of_goods_sold = $cell['value'] < 0 ? $cell['value']  * -1 : $cell['value'] ;
                 }
             }
 
@@ -610,7 +720,7 @@ class FetchReportsData implements ShouldQueue
     // آی دی 31 مربوط به .... است
     // آی دی 32 مربوط به .... است
     // آی دی 33 مربوط به .... است
-    private function getCodalReportForSheetZero(CodalReport $codalReport , string $url)
+    private function getCodalReportForFinancialStatement(CodalReport $codalReport , string $url)
     {
         $netProfitLossData = Http::withHeaders([
             'Accept' => 'application/json',
@@ -636,80 +746,64 @@ class FetchReportsData implements ShouldQueue
             }
 
             $cells = $sheet["tables"][0]["cells"];
+            $secondColumnCode = 3 ;
             foreach ($cells as $cell) {
-                // "type":6,
-                // "period":6
-                if ($cell['rowCode'] === 44  &&  $cell['columnCode'] === 2    ){
 
-                    $codalReport->trade_and_other_receivables =  $cell['value'];
-
-                }
-                if ($cell['rowCode'] === 39  &&  $cell['columnCode'] === 2    ){
-                    $codalReport->total_equity = $cell['value'];
+                if ($cell['rowCode'] === 19   &&  $cell['columnCode'] === 2 && $cell['category'] === 2      ){
+                    $codalReport->total_liabilities =  $cell['value'];
                 }
 
-            }
-            return $codalReport ;
-
-        }else{
-            return "hasProblem";
-        }
-
-    }
-
-    // دریافت اطلاعات از بخش ....
-    // آی دی 223 مربوط به جدول .... است
-    // آی دی 31 مربوط به .... است
-    // آی دی 32 مربوط به .... است
-    // آی دی 33 مربوط به .... است
-    private function getCodalReportForSheet20(CodalReport $codalReport , string $url)
-    {
-        $netProfitLossData = Http::withHeaders([
-            'Accept' => 'application/json',
-        ])->get($url . '&sheetId=20');
-        $html = $netProfitLossData->body();
-        preg_match('/var\s+datasource\s*=\s*(\{.*?\});/s', $html, $matches);
-        if (!empty($matches[1])) {
-            $datasourceRaw = $matches[1];
-            $datasourceRaw = trim($datasourceRaw, ";\n\r ");
-            $datasourceArray = json_decode($datasourceRaw, true);
-            if (json_last_error() !== JSON_ERROR_NONE) {
-                $datasourceRaw = preg_replace('/,\s*]/', ']', $datasourceRaw); // حذف کاما اضافه
-                $datasourceArray = json_decode($datasourceRaw, true);
-            }
-            if (is_null($datasourceArray) || empty($datasourceArray)){
-                return "hasProblem";
-            }
-
-            $sheet = $datasourceArray['sheets'][0] ;
-
-            if ($sheet['code'] !== 20){
-                return "hasProblem";
-            }
-
-            $key = array_search(223,  array_column($datasourceArray['sheets'][0]["tables"], 'code'));
-            $cells = $datasourceArray['sheets'][0]["tables"][$key]["cells"];
-
-
-            foreach ($cells as $cell) {
-                // "type":6,
-                // "period":6
-
-                if ($cell['rowCode'] === 31 &&  $cell['columnCode'] === 3  ){
-                    $codalReport->first_period_finished_goods_inventory = $cell['value'];
+                if ($cell['rowCode'] === 19  &&   $cell['columnCode'] === 2  && $cell['category'] === 1     ){
+                    $codalReport->total_none_current_assets =  $cell['value'];
                 }
 
-                if ($cell['rowCode'] === 32  &&  $cell['columnCode'] === 3  ){
-                    $codalReport->ending_period_finished_goods_inventory = $cell['value'];
+                if ($cell['rowCode'] === 11  &&    $cell['columnCode'] === 2  && $cell['category'] === 1    ){
+                    $codalReport->total_current_assets =  $cell['value'];
                 }
 
-                if ($cell['rowCode'] === 33  &&  $cell['columnCode'] === 3  ){
-                    $codalReport->cost_of_goods_sold = $cell['value'];
+                if ($cell['rowCode'] === 33  &&   $cell['columnCode'] === 2  && $cell['category'] === 1    ){
+                    $codalReport->total_assets =  $cell['value'];
+                }
+
+                if ($cell['rowCode'] === 44  &&   $cell['columnCode'] === 2  && $cell['category'] === 1   ){
+                    $codalReport->trade_and_other_receivables_current_period =  $cell['value'];
+                }
+
+
+                if ($cell['rowCode'] === 44  &&   $cell['columnCode'] === $secondColumnCode  && $cell['category'] === 1   ){
+                    if (   $cell['isVisible'] === true ){
+                        $codalReport->trade_and_other_receivables_prior_period =  $cell['value'];
+                    }else {
+                        $secondColumnCode = $secondColumnCode + 1 ;
+                    }
 
                 }
 
-            }
+                if ($cell['rowCode'] === 12  &&   $cell['columnCode'] === 2  && $cell['category'] === 2   ){
+                    $codalReport->total_current_liabilities = $cell['value'];
+                }
 
+                if ($cell['rowCode'] === 18  &&   $cell['columnCode'] === 2  && $cell['category'] === 2    ){
+                    $codalReport->total_non_current_liabilities = $cell['value'];
+                }
+
+                if ($cell['rowCode'] === 9  &&  $cell['columnCode'] === 2  && $cell['category'] === 1     ){
+                    $codalReport->orders_and_prepayments = $cell['value'];
+                }
+
+                if ($cell['rowCode'] === 8   &&  $cell['columnCode'] === 2  && $cell['category'] === 1    ){
+                    $codalReport->inventory_of_materials_and_goods_current_period = $cell['value'];
+                }
+
+                if ($cell['rowCode'] === 8  &&    $cell['columnCode'] === 3  && $cell['category'] === 1 ){
+                    $codalReport->inventory_of_materials_and_goods_prior_period = $cell['value'];
+                }
+
+                if ($cell['rowCode'] === 39  &&     $cell['columnCode'] === 2  && $cell['category'] === 2  ){
+                    $codalReport->total_shareholders_equity = $cell['value'];
+                }
+
+            }
             return $codalReport ;
 
         }else{

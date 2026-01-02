@@ -1,0 +1,79 @@
+
+inventory_turnover_period // دوره گردش دارایی ها
+receivables_collection_period //   دوره وصول مطالبات
+profit_margin // حاشیه سود
+market_cap // ارزش بازار
+sales_growth_rate // میزان درصد رشد فروش
+dividend_payout  //  تقسیم سود
+
+
+current_ratio // نسبت جاری
+quick_ratio // نسبت آنی
+total_asset_turnover_ratio // نسبت گردش دارایی ها
+fixed_asset_turnover_ratio // نسبت گردش دارایی های ثابت
+operating_cycle_ratio // نسبت گردش عملیات
+inventory_to_working_capital_ratio // نسبت موجودی کالا به سرمایه در گردش
+long_term_debt_to_equity_ratio // نسبت بدهی های بلند مدت به حقوق صاحبان سهام
+total_debt_to_total_assets_ratio //  نسبت کل بدهی به کل دارایی ها
+current_debt_to_equity_ratio // نسبت بدهی جاری به ارزش ویژه
+debt_to_equity_ratio // نسبت بدهی ها به ارزش ویژه
+net_profit_margin // نسبت سود خالص
+operating_profit_margin // نسبت سود عملیاتی
+return_on_sales // نسبت بازده فروش
+return_on_equity //  نسبت بازده ارزش ویژه
+return_on_working_capital // نسبت بازده سرمایه در گردش
+fixed_assets_to_equity_ratio // نسبت دارایی ثابت به ارزش ویژه
+return_on_assets // نسبت بازده دارایی ها
+equity_ratio // نسبت مالکانه
+
+----------------------------------------------------------------------------------------------------------
+operating_income // درآمدهای عملیاتی
+net_profit_and_loss // سود(زيان) خالص
+gross_profit_and_loss // سود(زيان) ناخالص
+operating_profit_and_loss // سود(زيان) عملیاتی
+number_of_shares  // تعداد سهام
+cost_of_goods_sold // بهاي تمام شده كالاي فروش رفته
+
+
+total_none_current_assets // جمع دارایی‌های غیرجاری
+total_current_assets // جمع دارایی‌های جاری
+total_assets // جمع دارایی‌ها
+trade_and_other_receivables_current_period  // دريافتني‌هاي تجاري و ساير دريافتني‌ها دوره جاری
+trade_and_other_receivables_prior_period  // دريافتني‌هاي تجاري و ساير دريافتني‌ها دوره قبل
+total_current_liabilities // جمع بدهی‌های جاری
+total_non_current_liabilities // جمع بدهی‌های غیر جاری
+orders_and_prepayments // سفارشات و پیش‌پرداخت‌ها
+inventory_of_materials_and_goods_current_period // موجودی مواد و کالای دوره جاری
+inventory_of_materials_and_goods_prior_period // موجودی مواد و کالای دوره قبل
+total_shareholders_equity // جمع حقوق صاحبان سهام
+
+
+
+
+
+
+p_e
+p_s
+p_b
+p_a
+
+
+
+
+
+
+ $stockFundamental->p_e = $stock->lastForecastPrice->p_e_forward ;
+        $stockFundamental->p_s =  $stock->last_price /  ( $lastCodalReport->operating_income / $lastCodalReport->number_of_shares ) ;
+        $stockFundamental->p_b = $stockFundamental->market_cap / $lastCodalReport->total_equity ;
+
+        if ($lastCodalReport->assets != 0 ){
+            $stockFundamental->p_a  =  $stockFundamental->market_cap / $lastCodalReport->assets ;
+        }else {
+            $stockFundamental->p_a  =  0 ;
+        }
+
+
+
+
+
+

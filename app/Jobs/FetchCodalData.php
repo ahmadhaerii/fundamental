@@ -52,6 +52,7 @@ class FetchCodalData implements ShouldQueue
         $this->getCodal_6_monthData($stock);
         $this->getCodal_9_monthData( $stock);
         $this->getCodal_12_monthData($stock);
+        $this->getCodalOrdinaryGeneralAssemblyResolutionsData($stock);
 
         return  'done';
 
@@ -183,6 +184,30 @@ class FetchCodalData implements ShouldQueue
                 $reportQueue->tracing_no = $letter["TracingNo"];
                 $reportQueue->url =  'https://www.codal.ir' . $letter["Url"];
                 $reportQueue->report_type = "m12";
+                $reportQueue->status = 'pending';
+                $reportQueue->stock_id = $stock->id;
+                $reportQueue->save();
+            }
+
+        }
+    }
+
+    private function getCodalOrdinaryGeneralAssemblyResolutionsData( Stock $stock){
+
+        $response = Http::withHeaders([
+            'Accept' => 'application/json',
+        ])->get($stock->stockDailyCheckUrl->ordinary_general_assembly_resolutions);
+
+        $codalData = $response->json();
+        
+        foreach ($codalData['Letters'] as $letter) {
+            $reportQueue = ReportQueue::where('tracing_no', $letter["TracingNo"])->get()->first();
+        error_log('tracing_no  ' . $letter["TracingNo"]);
+            if ($reportQueue == null) {
+                $reportQueue = new ReportQueue();
+                $reportQueue->tracing_no = $letter["TracingNo"];
+                $reportQueue->url =  'https://www.codal.ir' . $letter["Url"];
+                $reportQueue->report_type = "ordinary_general_assembly_resolutions";
                 $reportQueue->status = 'pending';
                 $reportQueue->stock_id = $stock->id;
                 $reportQueue->save();
