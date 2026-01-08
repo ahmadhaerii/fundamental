@@ -5,6 +5,7 @@ namespace App\Http\Controllers\MyTest;
 use App\Http\Controllers\Controller;
 use App\Jobs\FetchCodalData;
 use App\Jobs\FetchReportsData;
+use App\Jobs\FetchTsetmcData;
 use App\Models\Stock;
 use App\Models\CodalReport;
 use App\Services\CalculateForecastPriceData;
@@ -14,18 +15,21 @@ use Illuminate\Support\Facades\Http;
 
 class MyTestController extends Controller
 {
+
     public function __construct(
         protected CalculateForecastPriceData $calculateForecastPriceData,
         protected CalculateStockFundamentalsData $calculateStockFundamentalsData,
+        protected FetchTsetmcData $fetchTsetmcData,
     ) {}
 
     public function startAutoDownloadData(){
-       // FetchCodalData::dispatch();
-        FetchReportsData::dispatch($this->calculateStockFundamentalsData);
+          FetchTsetmcData::dispatch();
+          FetchCodalData::dispatch();
+          FetchReportsData::dispatch( );
         return "done" ;
     }
     public function startAutoDownloadCodal(){
-        FetchReportsData::dispatch($this->calculateStockFundamentalsData);
+        FetchReportsData::dispatch( );
         return "done" ;
     }
     public function getStockData(Request $request , string $id){

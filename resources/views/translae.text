@@ -46,6 +46,7 @@ orders_and_prepayments // سفارشات و پیش‌پرداخت‌ها
 inventory_of_materials_and_goods_current_period // موجودی مواد و کالای دوره جاری
 inventory_of_materials_and_goods_prior_period // موجودی مواد و کالای دوره قبل
 total_shareholders_equity // جمع حقوق صاحبان سهام
+----------------------------------------------------------------------------------------------------
 
 
 
@@ -60,17 +61,6 @@ p_a
 
 
 
-
-
- $stockFundamental->p_e = $stock->lastForecastPrice->p_e_forward ;
-        $stockFundamental->p_s =  $stock->last_price /  ( $lastCodalReport->operating_income / $lastCodalReport->number_of_shares ) ;
-        $stockFundamental->p_b = $stockFundamental->market_cap / $lastCodalReport->total_equity ;
-
-        if ($lastCodalReport->assets != 0 ){
-            $stockFundamental->p_a  =  $stockFundamental->market_cap / $lastCodalReport->assets ;
-        }else {
-            $stockFundamental->p_a  =  0 ;
-        }
 
 
 

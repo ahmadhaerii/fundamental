@@ -149,7 +149,7 @@ class CalculateForecastPriceData {
             $forecastPrice = new ForecastPrice();
             $forecastPrice->stock_id= $stockId ;
             $forecastPrice->year= $forwardMonthlyStockData->year ;
-            $forecastPrice->price= 134550 ; // get data from ts
+            $forecastPrice->price= $stock->last_price   ;
             $forecastPrice->number_of_shares= $stock->number_of_shares ;
 
             $seasonData = $this->getSeasonData($forwardMonthlyStockData) ;

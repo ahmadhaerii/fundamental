@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class Stock extends Model
 {
-    protected $fillable = ['title', 'content', 'category_id'];
+    protected $fillable = ['name', 'content', 'category_id','update_time', 'p_e_ttm','full_name','number_of_shares', 'last_price'];
 
     public function category()
     {
@@ -42,6 +42,9 @@ class Stock extends Model
     }
     public function stockFundamental() {
         return $this->hasMany(StockFundamental::class);
+    }
+    public function priceBasedValuationRatios() {
+        return $this->hasMany(PriceBasedValuationRatio::class);
     }
 
 }

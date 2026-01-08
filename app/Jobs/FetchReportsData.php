@@ -23,42 +23,63 @@ class FetchReportsData implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, \Illuminate\Bus\Queueable, SerializesModels;
     protected $calculateForecastPriceData;
+    protected $calculateStockFundamentalsData;
 
 
     /**
      * Create a new job instance.
      */
     public function __construct(
-        protected CalculateStockFundamentalsData $calculateStockFundamentalsData,
+
     ) {}
 
-    public function handle(CalculateForecastPriceData $calculateForecastPriceData)
+    public function handle(CalculateForecastPriceData $calculateForecastPriceData , CalculateStockFundamentalsData $calculateStockFundamentalsData)
     {
+
         $this->calculateForecastPriceData = $calculateForecastPriceData;
+        $this->calculateStockFundamentalsData = $calculateStockFundamentalsData;
             error_log("aaa ");
 
 
-        $reportQueue = ReportQueue::where('status', 'pending')->with('stock')->orderBy('tracing_no', 'asc')->get()->first();
+        $reportQueue = ReportQueue::where('status', 'pending') ->where(function ($query) {
+            $query->where('report_type', 'm12')
+                ->orWhere('report_type', 'ordinary_general_assembly_resolutions');
+        })->with('stock')->orderBy('tracing_no', 'asc')->get()->first();
         if ($reportQueue != null) {
             error_log('getdata for   ' .$reportQueue->tracing_no . "  " . $reportQueue->report_type);
 
-            if ($reportQueue->report_type == 'm1') {
-                $this->getCodal_1_monthData($reportQueue);
-            }elseif ($reportQueue->report_type == 'm3') {
-                // $this->getCodal_3_monthData($reportQueue);
-            }elseif($reportQueue->report_type == 'm6') {
-              //  $this->getCodal_6_monthData($reportQueue);
-           }elseif($reportQueue->report_type == 'm9') {
-               // $this->getCodal_9_monthData($reportQueue);
-            }elseif($reportQueue->report_type == 'm12') {
+//            if ($reportQueue->report_type == 'm1') {
+//               // $this->getCodal_1_monthData($reportQueue);
+//            }elseif ($reportQueue->report_type == 'm3') {
+//                // $this->getCodal_3_monthData($reportQueue);
+//            }elseif($reportQueue->report_type == 'm6') {
+//              //  $this->getCodal_6_monthData($reportQueue);
+//           }elseif($reportQueue->report_type == 'm9') {
+//               // $this->getCodal_9_monthData($reportQueue);
+//            }else
+            if($reportQueue->report_type == 'm12') {
                $this->getCodal_12_monthData($reportQueue);
+                self::dispatch()->delay(now()->addSeconds(10));
+
             }elseif($reportQueue->report_type == 'ordinary_general_assembly_resolutions') {
-               $this->getCodalOrdinaryGeneralAssemblyResolutionsData($reportQueue);
+                try {
+                    $this->getCodalOrdinaryGeneralAssemblyResolutionsData($reportQueue);
+                } catch (\Throwable  $e) {
+                    error_log("catch error " . $e->getMessage());
+
+                    $reportQueue->update([
+                        'status' => "catch error " . $e->getMessage(),
+                    ]);
+                }
+                self::dispatch()->delay(now()->addSeconds(10));
+            }else {
+                self::dispatch()->delay(now()->addSeconds(3));
             }
 
+        }else {
+            self::dispatch()->delay(now()->addSeconds(3));
         }
 
-         // self::dispatch()->delay(now()->addSeconds(20));
     }
 
     private function getCodal_1_monthData( ReportQueue $reportQueue  ){
@@ -433,6 +454,7 @@ class FetchReportsData implements ShouldQueue
 
             $codalReport = CodalReport::where('tracing_no', $reportQueue->tracing_no)->get()->first();
             if ($codalReport == null) {
+                try {
 
                 $codalReport1 = new CodalReport();
                 $codalReport1->report_period = 12 ;
@@ -472,8 +494,11 @@ class FetchReportsData implements ShouldQueue
                             }
 
                             $beforeYearlyStockData = YearlyStockData::where("stock_id", $yearlyStockData->stock_id )->where("year", $codalReport1->year - 1 )->get()->first();
+                        error_log(" 6666666666666 => "  . $yearlyStockData->net_profit_and_loss_in_dollars);
 
                             if ($beforeYearlyStockData !== null && $yearlyStockData->net_profit_and_loss_in_dollars !== 0 ) {
+                                error_log(" 7777777777777777 => " );
+
                                 $yearlyStockData->operating_income_in_dollars_changes = ($yearlyStockData->operating_income_in_dollars / $beforeYearlyStockData->operating_income_in_dollars) /  $beforeYearlyStockData->operating_income_in_dollars ;
                                 $yearlyStockData->production_cost_in_dollars_changes = ($yearlyStockData->production_cost_in_dollars / $beforeYearlyStockData->production_cost_in_dollars) /  $beforeYearlyStockData->production_cost_in_dollars ;
                                 $yearlyStockData->net_profit_and_loss_in_dollars_changes = ($yearlyStockData->net_profit_and_loss_in_dollars / $beforeYearlyStockData->net_profit_and_loss_in_dollars) /  $beforeYearlyStockData->net_profit_and_loss_in_dollars ;
@@ -481,7 +506,12 @@ class FetchReportsData implements ShouldQueue
 
                             }else {
                                 $afterYearlyStockData = YearlyStockData::where("stock_id", $yearlyStockData->stock_id )->where("year", $codalReport1->year + 1 )->get()->first();
-                                if ($afterYearlyStockData !== null && $yearlyStockData->operating_income_in_dollars == 0 && $yearlyStockData->net_profit_and_loss_in_dollars == 0 ) {
+                                error_log(" 99999999999 => " );
+
+                                if ($afterYearlyStockData !== null
+                                    && $yearlyStockData->operating_income_in_dollars == 0
+                                    && $yearlyStockData->net_profit_and_loss_in_dollars == 0 ) {
+                                    error_log(" 88888888 => " );
 
                                     $afterYearlyStockData->update([
                                         'operating_income_in_dollars_changes' => ($afterYearlyStockData->operating_income_in_dollars / $yearlyStockData->operating_income_in_dollars) /  $yearlyStockData->operating_income_in_dollars,
@@ -489,6 +519,12 @@ class FetchReportsData implements ShouldQueue
                                         'net_profit_and_loss_in_dollars_changes' => ($afterYearlyStockData->net_profit_and_loss_in_dollars / $yearlyStockData->net_profit_and_loss_in_dollars) /  $yearlyStockData->net_profit_and_loss_in_dollars,
                                         'leverage' => (($afterYearlyStockData->net_profit_and_loss_in_dollars / $yearlyStockData->net_profit_and_loss_in_dollars) /  $yearlyStockData->net_profit_and_loss_in_dollars) /  (($afterYearlyStockData->operating_income_in_dollars / $yearlyStockData->operating_income_in_dollars) /  $yearlyStockData->operating_income_in_dollars),
                                     ]);
+                                }else {
+                                    $yearlyStockData->operating_income_in_dollars_changes = 0 ;
+                                    $yearlyStockData->production_cost_in_dollars_changes = 0;
+                                    $yearlyStockData->net_profit_and_loss_in_dollars_changes = 0 ;
+                                    $yearlyStockData->leverage = 0;
+
                                 }
 
                             }
@@ -520,6 +556,7 @@ class FetchReportsData implements ShouldQueue
                             $reportQueue->update([
                                 'status' => "success",
                             ]);
+
                     }else{
                         $reportQueue->update([
                             'status' => "failed-SheetZero-problem",
@@ -528,6 +565,11 @@ class FetchReportsData implements ShouldQueue
                 }else{
                     $reportQueue->update([
                         'status' => "failed-SheetOne-problem",
+                    ]);
+                }
+                } catch (\Throwable  $e) {
+                    $reportQueue->update([
+                        'status' => "catch error " . $e->getMessage(),
                     ]);
                 }
             }else {
@@ -568,9 +610,8 @@ class FetchReportsData implements ShouldQueue
                         'status' => "failed-Input-not-found",
                         ]);
                     }
-                    $year_end_to_date = $crawler->filter('#lblYearEndToDate')->text();
 
-                    try {
+                             $year_end_to_date = $crawler->filter('#lblYearEndToDate')->text();
 
                             $ordinaryGeneralAssemblyResolution = new OrdinaryGeneralAssemblyResolution();
                             $ordinaryGeneralAssemblyResolution->net_profit_and_loss_per_share = $net_profit_and_loss_per_share ;
@@ -584,15 +625,14 @@ class FetchReportsData implements ShouldQueue
                             $reportQueue->update([
                                 'status' => "success",
                             ]);
-                        $yearlyStockData = YearlyStockData::where("stock_id", $ordinaryGeneralAssemblyResolution->stock_id )->where("year", $ordinaryGeneralAssemblyResolution->year )->get()->first();
-                        $yearlyStockData->update([
-                            'dp' => $ordinaryGeneralAssemblyResolution->dp,
-                        ]);
-                    } catch (Exception $e) {
-                        $reportQueue->update([
-                            'status' => "error=>  catch ",
-                        ]);
-                    }
+
+                            $yearlyStockData = YearlyStockData::where("stock_id", $ordinaryGeneralAssemblyResolution->stock_id )->where("year", $ordinaryGeneralAssemblyResolution->year )->get()->first();
+
+                            if ($yearlyStockData !== null) {
+                                $yearlyStockData->update([
+                                    'dp' => $ordinaryGeneralAssemblyResolution->dp,
+                                ]);
+                            }
 
     }
 
@@ -609,6 +649,7 @@ class FetchReportsData implements ShouldQueue
         $html = $netProfitLossData->body();
         preg_match('/var\s+datasource\s*=\s*(\{.*?\});/s', $html, $matches);
         if (!empty($matches[1])) {
+
             $datasourceRaw = $matches[1];
             $datasourceRaw = trim($datasourceRaw, ";\n\r ");
             $datasourceArray = json_decode($datasourceRaw, true);
@@ -741,7 +782,7 @@ class FetchReportsData implements ShouldQueue
                 return "hasProblem";
             }
             $sheet = $datasourceArray['sheets'][0] ;
-            if ($sheet['code'] !== 0 || $sheet['sequence'] !== 4 ){
+            if ($sheet['code'] !== 0  ){
                 return "hasProblem";
             }
 

@@ -19,6 +19,7 @@ class CalculateStockFundamentalsData {
     public function calculate( int  $stockId) {
         $stockFundamental = new StockFundamental();
         $lastCodalReport = CodalReport::where("stock_id" , $stockId )->where('report_period', 12)->get()->last();
+        $stockFundamental->year = $lastCodalReport->year;
         $stockFundamental->inventory_turnover_period =
             (( ( $lastCodalReport->inventory_of_materials_and_goods_current_period  + $lastCodalReport->inventory_of_materials_and_goods_prior_period) / 2)
                 /  $lastCodalReport->cost_of_goods_sold ) * 365;

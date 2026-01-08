@@ -28,24 +28,28 @@ class FetchCodalData implements ShouldQueue
 
     public function handle()
     {
-       $stock =  Stock::with('stockDailyCheckUrl')->orderBy('update_time', 'asc')->firstOrFail();
+       $stock =  Stock::with('stockDailyCheckUrl')->orderBy('update_time', 'DESC')->get()->last();
         if ($stock == null) {
             return "سهم پیدا نشد";
         }
         error_log('start job for  ' . $stock->name);
+        $stock->update([
+            'update_time' => now() ,
+        ]);
 
-        $this->getStock($stock);
+        if ($stock->stockDailyCheckUrl != null ){
+            $this->getStock($stock);
+            self::dispatch()->delay(now()->addSeconds(20000));
+        }else {
+            self::dispatch()->delay(now()->addSeconds(3));
+        }
 
 
-//       self::dispatch()->delay(now()->addSeconds(300));
+
     }
 
 
     public function getStock(Stock $stock) {
-
-//        $response = Http::get('https://cdn.tsetmc.com/api/Instrument/GetInstrumentInfo/778253364357513');
-//        $response = Http::get('https://cdn.tsetmc.com/api/ClosingPrice/GetClosingPriceInfo/778253364357513');
-
 
         $this->getCodal_1_monthData($stock);
         $this->getCodal_3_monthData($stock);
@@ -53,6 +57,7 @@ class FetchCodalData implements ShouldQueue
         $this->getCodal_9_monthData( $stock);
         $this->getCodal_12_monthData($stock);
         $this->getCodalOrdinaryGeneralAssemblyResolutionsData($stock);
+
 
         return  'done';
 
@@ -199,10 +204,10 @@ class FetchCodalData implements ShouldQueue
         ])->get($stock->stockDailyCheckUrl->ordinary_general_assembly_resolutions);
 
         $codalData = $response->json();
-        
+
         foreach ($codalData['Letters'] as $letter) {
             $reportQueue = ReportQueue::where('tracing_no', $letter["TracingNo"])->get()->first();
-        error_log('tracing_no  ' . $letter["TracingNo"]);
+
             if ($reportQueue == null) {
                 $reportQueue = new ReportQueue();
                 $reportQueue->tracing_no = $letter["TracingNo"];
